@@ -4,7 +4,7 @@ module CircleImage where
 import Codec.Picture
 import Graphics.Rasterific
 import Graphics.Rasterific.Texture
--- import qualified Data.Vector.Storable as V
+import qualified Data.Vector.Storable as V
 
 data Circle =
   Circle { circleX :: Int
@@ -72,29 +72,46 @@ diffImages img1@(Image w1 h1 _) img2@(Image w2 h2 _) =
     red   = PixelRGBA8 200   0   0 255
 
 
-fitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Float
+fitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Double
 fitness source@(Image w h _) target =
-  1.0 - (fromInteger raw / fromIntegral maxError)
+  raw
   where
     raw =
-      sum [abs $ diff (s x y) (t x y) | x <- [0..w-1]
-                                      , y <- [0..h-1]]
-    maxError =
-      w * h * 4 * 255
-
+      sum [diff (s x y) (t x y) | x <- [0..w-1]
+                                , y <- [0..h-1]]
     s = pixelAt source
     t = pixelAt target
 
     (-.) cs ct =
-      toInteger cs - toInteger ct
+      delta * delta
+      where
+        delta = fromIntegral cs / 255 - fromIntegral ct / 255
 
-    diff :: PixelRGBA8 -> PixelRGBA8 -> Integer
-    diff (PixelRGBA8 r g b a) (PixelRGBA8 r' g' b' a') =
+    diff :: PixelRGBA8 -> PixelRGBA8 -> Double
+    diff (PixelRGBA8 r g b _) (PixelRGBA8 r' g' b' _) =
       r -. r' +
       g -. g' +
-      b -. b' +
-      a -. a'
+      b -. b'
 
+
+fitness' :: Image PixelRGBA8 -> Image PixelRGBA8 -> Double
+fitness' (Image _ _ source) (Image _ _ target) =
+  sum $ zipWith deltaSq (V.toList source) (V.toList target)
+  where
+    deltaSq a b =
+      delta * delta
+      where delta = fromIntegral a / 255 - fromIntegral b / 255
+
+
+fitness'' :: Image PixelRGBA8 -> Image PixelRGBA8 -> Double
+fitness'' (Image _ _ source) (Image _ _ target) =
+  V.ifoldl' worker 0 source
+  where
+    worker acc i x = acc + deltaSq x (target V.! i)
+    deltaSq x x' =
+      let delta = toD x - toD x'
+      in delta * delta
+    toD x = fromIntegral x / 255
 
 renderTest :: IO ()
 renderTest =
