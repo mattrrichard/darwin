@@ -7,4 +7,8 @@ executable darwin
   hs-source-dirs:      src
   main-is:             Main.hs
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       JuicyPixels >= 3.2.0,
+                       Rasterific >= 0.6.1,
+                       base >= 4.7 && < 5,
+                       vector >= 0.11.0.0
+                     
