@@ -6,6 +6,7 @@ import Graphics.Rasterific.Texture
 import Data.Random
 import Control.Monad
 
+import Util
 
 data Circle =
   Circle { circleX :: Int
@@ -41,40 +42,20 @@ circleGen imageW imageH = do
     col = uniform 0 255
 
 
-normalInt :: Int -> RVar Int
-normalInt s = do
-  x <- stdNormal :: RVar Float
-  return (round (x * fromIntegral s))
+tweakCircleImage :: Int -> Int -> CircleImage -> RVar CircleImage
+tweakCircleImage s sc =
+  mapM (tweakCircle s sc)
 
 
-tweakCircleImage :: Int -> CircleImage -> RVar CircleImage
-tweakCircleImage s =
-  mapM (tweakCircle s)
-
-tweakCircle :: Int -> Circle -> RVar Circle
-tweakCircle s (Circle x y r c) = do
+tweakCircle :: Int -> Int -> Circle -> RVar Circle
+tweakCircle s sc (Circle x y r c) = do
   dx <- normalInt s
   dy <- normalInt s
   dr <- normalInt s
 
-  c' <- tweakColor c
+  c' <- tweakPixelRGBA8 sc c
 
   return $ Circle (x+dx) (y+dy) (r+dr) c'
-
-  where
-    tweakColor (PixelRGBA8 r g b a) = do
-      r' <- colorDelta r
-      g' <- colorDelta g
-      b' <- colorDelta b
-      a' <- colorDelta a
-
-      return $ PixelRGBA8 r' g' b' a'
-
-    colorDelta x = do
-      dx <- normalInt 64
-      return $ clamp (fromIntegral x + dx)
-
-    clamp x = fromIntegral $ max 0 (min 255 x)
 
 
 renderCircle :: Circle -> Drawing PixelRGBA8 ()

@@ -7,10 +7,6 @@ import SimulatedAnnealing
 import qualified Data.Vector.Storable as V
 import Data.Random
 
-main :: IO ()
-main = testSim
-
-
 fitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Double
 fitness (Image _ _ source) (Image _ _ target) =
   sum $ zipWith deltaSq (V.toList source) (V.toList target)
@@ -25,7 +21,6 @@ circleImageFitness  w h source =
   fitness source . renderWhite w h . renderCircles
 
 
-
 renderWhite :: Int -> Int -> Drawing PixelRGBA8 () -> Image PixelRGBA8
 renderWhite w h =
   renderDrawing w h white
@@ -33,25 +28,15 @@ renderWhite w h =
     white = PixelRGBA8 255 255 255 255
 
 
-runSim :: Int -> Image PixelRGBA8 -> CircleImage -> RVar CircleImage
-runSim maxGens source =
-  simulatedAnnealing tweak quality maxGens 100 (-0.25)
-  where
-    tweak = tweakCircleImage 5
-    quality = circleImageFitness  306 240 source
-
-
-testSim :: IO ()
-testSim = do
-  -- source <- runRVar (circleImageGen 50 400 400) StdRandom
-  -- let sourceImg = render source
-
+main :: IO ()
+main = do
+  -- TODO: Stop being lazy and handle the possible failure here
   (Right source) <- readImage "images/landscape-st-remy-306-240.jpg"
   let sourceImg = convertRGBA8 source
 
   initial <- runRVar (circleImageGen 50 306 240) StdRandom
 
-  best <- runRVar (runSim 25000 sourceImg initial) StdRandom
+  best <- runRVar (runSim 500 sourceImg initial) StdRandom
 
   writePng "source.png" sourceImg
   writePng "initial.png" $ render initial
@@ -60,3 +45,9 @@ testSim = do
   where
     render =
       renderWhite 306 240 . renderCircles
+
+    runSim maxGens source =
+      simulatedAnnealing tweak quality maxGens 100 (-0.25)
+      where
+        tweak = tweakCircleImage 5 16
+        quality = circleImageFitness  306 240 source
