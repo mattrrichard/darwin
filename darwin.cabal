@@ -10,5 +10,5 @@ executable darwin
   build-depends:       JuicyPixels >= 3.2.0,
                        Rasterific >= 0.6.1,
                        base >= 4.7 && < 5,
+                       random-fu >= 0.2.6.2,
                        vector >= 0.11.0.0
-                     
