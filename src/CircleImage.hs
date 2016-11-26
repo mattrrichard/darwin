@@ -1,32 +1,31 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE StandaloneDeriving    #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 module CircleImage where
 
-import Codec.Picture
-import Graphics.Rasterific
-import Graphics.Rasterific.Texture
-import Data.Random
-import Control.Monad
-import qualified Data.Vector.Storable as V
-import Graphics.Rasterific
-import Evolution
-import Util
-import GHC.Generics
-import Control.DeepSeq
+import           Codec.Picture
+import           Control.DeepSeq
+import           Control.Monad
+import           Data.Random
+import qualified Data.Vector.Storable        as V
+import           Evolution
+import           GHC.Generics
+import           Graphics.Rasterific
+import           Graphics.Rasterific
+import           Graphics.Rasterific.Texture
+import           Util
 
 deriving instance Read PixelRGBA8
 deriving instance Generic PixelRGBA8
 instance NFData PixelRGBA8
 
 data Circle =
-  Circle { circleX :: Int
-         , circleY :: Int
-         , circleR :: Int
+  Circle { circleX     :: Int
+         , circleY     :: Int
+         , circleR     :: Int
          , circleColor :: PixelRGBA8
          }
   deriving (Read, Show, Generic)

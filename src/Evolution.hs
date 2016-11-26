@@ -1,8 +1,8 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DeriveGeneric          #-}
+{-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 module Evolution
        ( Individual (..)
@@ -11,22 +11,26 @@ module Evolution
        , evolve
        ) where
 
-import Data.Foldable (minimumBy)
-import Data.Maybe
-import Data.Random
-import Data.List
-import Control.Parallel.Strategies
-import Control.DeepSeq
-import GHC.Generics
+import           Control.DeepSeq
+import           Control.Monad
+import           Control.Parallel.Strategies
+import           Data.Foldable               (minimumBy)
+import           Data.List
+import           Data.Maybe
+import           Data.Random
+import           GHC.Generics
+
 
 class Monad m => Individual m a | a -> m where
   fitness :: a -> Double
   mutate :: a -> m a
   recombine :: a -> a -> m a
 
+
 class EvolutionStrategy s where
   joinGens :: Individual m a => s -> [a] -> [a] -> [a]
   breed :: Individual m a => s -> [a] -> m [a]
+
 
 data Cached a
   = Cached a Double

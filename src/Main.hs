@@ -1,19 +1,18 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
--- TODO: get all these language extensions in my cabal file
 
 module Main where
 
-import Codec.Picture
-import Graphics.Rasterific
-import CircleImage
-import SimulatedAnnealing
+import           CircleImage
+import           Codec.Picture
+import           Control.Monad
+import           Data.List
+import           Data.Random
 import qualified Data.Vector.Storable as V
-import Data.Random
-import Evolution
-import Data.List
-import Control.Monad
-import Strategies
+import           Evolution
+import           Graphics.Rasterific
+import           SimulatedAnnealing
+import           Strategies
 
 
 
