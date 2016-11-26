@@ -21,7 +21,7 @@ main = do
   (Right source) <- readImage "images/landscape-st-remy-306-240.jpg"
   let sourceImg = convertRGBA8 source
 
-  -- previous <- readCircles <$> readFile "best-circles.txt"
+  -- previous <- readCircles <$> readFile "best.circles"
   -- let initial = map (CircleImage sourceImg) previous
 
   initial <- runRVar (replicateM 64 $ circleImageGen 50 sourceImg) StdRandom
@@ -33,7 +33,7 @@ main = do
   writePng "source.png" sourceImg
   writePng "best.png" $ render best
 
-  -- writeFile "best-circles.txt" (show (map circles lastGen))
+  -- writeFile "best.circles" (show (map circles lastGen))
 
   where
 

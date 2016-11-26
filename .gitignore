@@ -16,3 +16,6 @@ cabal.sandbox.config
 *.hp
 .stack-work/
 *.png
+TAGS
+*.circles
+images/
