@@ -65,12 +65,12 @@ circleGen imageW imageH = do
     col = uniform 0 255
 
 
-tweakCircleImage :: Int -> Int -> CircleImage -> RVar CircleImage
+tweakCircleImage :: Float -> Float -> CircleImage -> RVar CircleImage
 tweakCircleImage s sc (CircleImage original circles) =
   CircleImage original <$> mapM (tweakCircle s sc) circles
 
 
-tweakCircle :: Int -> Int -> Circle -> RVar Circle
+tweakCircle :: Float -> Float -> Circle -> RVar Circle
 tweakCircle s sc (Circle x y r c) = do
   dx <- normalInt s
   dy <- normalInt s
@@ -117,5 +117,5 @@ renderWhite w h =
 
 instance Individual RVar CircleImage where
   fitness = circleImageFitness
-  mutate = tweakCircleImage 5 16
+  mutate = tweakCircleImage 2.5 13
   recombine x y = return x

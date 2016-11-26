@@ -4,15 +4,14 @@ import Data.Random
 import Codec.Picture
 
 -- | Normal distribution with mean 0 and standard deviation @s@ in Int
-normalInt :: Int -> RVar Int
-normalInt s = do
-  x <- stdNormal :: RVar Float
-  return (round (x * fromIntegral s))
+normalInt :: Float -> RVar Int
+normalInt s =
+  round <$> normal (0 :: Float) s
 
 
 -- | tweak the components of an RGBA pixel via a random value from a
 -- normal distribution with mean 0 and standard deviation @s@
-tweakPixelRGBA8 :: Int -> PixelRGBA8 -> RVar PixelRGBA8
+tweakPixelRGBA8 :: Float -> PixelRGBA8 -> RVar PixelRGBA8
 tweakPixelRGBA8 s (PixelRGBA8 r g b a) = do
   r' <- colorDelta r
   g' <- colorDelta g
