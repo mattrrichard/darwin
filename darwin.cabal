@@ -3,6 +3,7 @@ version:             0.1.0.0
 build-type:          Simple
 cabal-version:       >=1.10
 
+
 executable darwin
   hs-source-dirs:      src
   main-is:             Main.hs
@@ -15,3 +16,9 @@ executable darwin
                      , vector
                      , parallel
                      , deepseq
+
+  other-modules:       Evolution
+                     , Util
+                     , CircleImage
+                     , Strategies
+                     , SimulatedAnnealing
