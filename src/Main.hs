@@ -9,7 +9,7 @@ import Data.Random
 
 fitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Double
 fitness (Image _ _ source) (Image _ _ target) =
-  sum $ zipWith deltaSq (V.toList source) (V.toList target)
+  V.sum $ V.zipWith deltaSq source target
   where
     deltaSq a b =
       delta * delta
