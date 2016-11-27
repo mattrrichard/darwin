@@ -21,3 +21,12 @@ instance EvolutionStrategy MuLambda where
         replicateM childrenPerParent (mutate parent)
 
       childrenPerParent = lambda `div` mu
+
+
+data MuPlusLambda = MuPlusLambda Int Int
+
+instance EvolutionStrategy MuPlusLambda where
+  breed (MuPlusLambda mu lambda) = breed (MuLambda mu lambda)
+
+  joinGens (MuPlusLambda _ lambda) parents children =
+    take lambda $ sortBy compareFitness (parents ++ children)
