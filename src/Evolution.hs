@@ -21,7 +21,7 @@ import           Data.Random
 import           GHC.Generics
 
 
-class Monad m => Individual m a | a -> m where
+class (Monad m, NFData a) => Individual m a | a -> m where
   fitness :: a -> Double
   mutate :: a -> m a
   recombine :: a -> a -> m a
@@ -56,14 +56,14 @@ ensureCached (Uncached a) = Cached a (fitness a)
 ensureCached c = c
 
 
-step :: (Individual m a, EvolutionStrategy s, NFData a) => s -> [Cached a] -> m [Cached a]
+step :: (Individual m a, EvolutionStrategy s) => s -> [Cached a] -> m [Cached a]
 step s pop = do
   let cachedPop = ensureCached <$> pop `using` parListChunk 32 rdeepseq
   nextGen <- breed s cachedPop
   return $ joinGens s cachedPop nextGen
 
 
-evolve :: (EvolutionStrategy s, Individual m a, NFData a) => s -> [a] -> [m [a]]
+evolve :: (EvolutionStrategy s, Individual m a) => s -> [a] -> [m [a]]
 evolve s startingPop =
   indFromCached `f3` cachedGens
   where
