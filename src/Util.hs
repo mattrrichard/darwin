@@ -27,3 +27,12 @@ tweakPixelRGBA8 s (PixelRGBA8 r g b a) = do
 
     clamp x = fromIntegral $ max 0 (min 255 x)
 
+
+maybeTweak :: Float -> (a -> RVar a) -> a -> RVar a
+maybeTweak p tweak target = do
+  x <- uniform 0 1
+
+  if x < p then
+    tweak target
+  else
+    return target

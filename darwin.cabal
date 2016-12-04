@@ -16,6 +16,7 @@ executable darwin
                      , vector
                      , parallel
                      , deepseq
+                     , monad-extras
 
   other-modules:       Evolution
                      , Util

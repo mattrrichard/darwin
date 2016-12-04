@@ -58,9 +58,12 @@ ensureCached c = c
 
 step :: (Individual m a, EvolutionStrategy s) => s -> [Cached a] -> m [Cached a]
 step s pop = do
-  let cachedPop = ensureCached <$> pop `using` parListChunk 32 rdeepseq
-  nextGen <- breed s cachedPop
+  let cachedPop = cache pop
+  nextGen <- cache <$> breed s cachedPop
   return $ joinGens s cachedPop nextGen
+
+  where
+    cache p = ensureCached <$> p `using` parListChunk 16 rdeepseq
 
 
 evolve :: (EvolutionStrategy s, Individual m a) => s -> [a] -> [m [a]]

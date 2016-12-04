@@ -67,7 +67,7 @@ circleGen imageW imageH = do
 
 tweakCircleImage :: Float -> Float -> CircleImage -> RVar CircleImage
 tweakCircleImage s sc (CircleImage original circles) =
-  CircleImage original <$> mapM (tweakCircle s sc) circles
+  CircleImage original <$> mapM (maybeTweak 0.15 $ tweakCircle s sc) circles
 
 
 tweakCircle :: Float -> Float -> Circle -> RVar Circle
@@ -117,5 +117,5 @@ renderWhite w h =
 
 instance Individual RVar CircleImage where
   fitness = circleImageFitness
-  mutate = tweakCircleImage 2.5 13
+  mutate = tweakCircleImage 4.5 13
   recombine x y = return x
