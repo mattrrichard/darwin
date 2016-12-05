@@ -16,36 +16,49 @@ import           SimulatedAnnealing
 import           Strategies
 import           System.IO
 
+main :: IO ()
 main = do
   (Right source) <- readImage "images/landscape-st-remy-306-240.jpg"
   let sourceImg = convertRGBA8 source
 
-  previous <- readCircles <$> readFile "best.circles"
-  let initial = map (CircleImage sourceImg) previous
+  let startGenId = 1600
 
-  iterateM (loop sourceImg 25) (175, initial)
+  initial <- getGen sourceImg 50 startGenId
+
+  iterateM (loop sourceImg 25) (startGenId, initial)
+
+  return ()
 
   where
+    getGen sourceImg size 0 =
+      runRVar (replicateM size $ circleImageGen 50 sourceImg) StdRandom
+
+    getGen sourceImg _ id =
+      map (CircleImage sourceImg) . readCircles
+      <$> readFile ("out/generation" ++ show id ++ ".circles")
+
     readCircles :: String -> [[Circle]]
     readCircles = read
 
-loop :: Image PixelRGBA8 -> Int -> (Int, [CircleImage]) -> IO (Int, [CircleImage])
-loop sourceImg stepCount (genCount, previous) = do
 
-  putStrLn $ "starting generation " ++ show genCount
+loop :: Image PixelRGBA8 -> Int -> (Int, [CircleImage]) -> IO (Int, [CircleImage])
+loop sourceImg stepCount (genId, initial) = do
+
+  putStrLn $ "starting from generation " ++ show genId
   hFlush stdout
 
-  initial <- runRVar (replicateM 64 $ circleImageGen 50 sourceImg) StdRandom
+  let generations = evolve (MuPlusLambda 8 64) initial
 
-  let generations = evolve (MuPlusLambda 16 64) initial
   lastGen <- runRVar (last . take stepCount $ generations) StdRandom
-  let best = circles $ minimumBy compareFitness lastGen
 
-  writePng ("best" ++ show genCount ++ ".png") $ render best
+  let best = head lastGen
+  let endingGenId = genId + stepCount
 
-  writeFile ("best" ++ show genCount ++ ".circles") (show (map circles lastGen))
+  writePng ("out/best" ++ show endingGenId ++ ".png") $ render best
 
-  return (genCount + stepCount, lastGen)
+  writeFile ("out/generation" ++ show endingGenId ++ ".circles") (show (map circles lastGen))
+
+  return (endingGenId, lastGen)
 
   where
 
@@ -54,5 +67,5 @@ loop sourceImg stepCount (genCount, previous) = do
 
     circles (CircleImage _ cs) = cs
 
-    render =
-      renderWhite 306 240 . renderCircles
+    render (CircleImage (Image w h _) circles) =
+      renderWhite w h $ renderCircles circles

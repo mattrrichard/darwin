@@ -59,11 +59,19 @@ ensureCached c = c
 step :: (Individual m a, EvolutionStrategy s) => s -> [Cached a] -> m [Cached a]
 step s pop = do
   let cachedPop = cache pop
-  nextGen <- cache <$> breed s cachedPop
-  return $ joinGens s cachedPop nextGen
+  children <- cache <$> breed s cachedPop
+
+  let nextGen = joinGens s cachedPop children
+
+  return $ sortBy compareFitness nextGen
 
   where
-    cache p = ensureCached <$> p `using` parListChunk 16 rdeepseq
+    cache p =
+      if all isCached p then p
+      else ensureCached <$> p `using` parListChunk 16 rdeepseq
+
+    isCached (Uncached _) = False
+    isCached _ = True
 
 
 evolve :: (EvolutionStrategy s, Individual m a) => s -> [a] -> [m [a]]

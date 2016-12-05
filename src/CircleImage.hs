@@ -65,9 +65,24 @@ circleGen imageW imageH = do
     col = uniform 0 255
 
 
+addCircle :: Image a -> [Circle] -> RVar [Circle]
+addCircle (Image w h _) =
+  liftM2 (:) (circleGen w h) . return
+
+
+removeCircle :: [Circle] -> RVar [Circle]
+removeCircle [] = return []
+removeCircle circles = do
+  x <- uniform 0 (length circles)
+  return $ (take x circles) ++ (drop (x + 1) circles)
+
+
 tweakCircleImage :: Float -> Float -> CircleImage -> RVar CircleImage
 tweakCircleImage s sc (CircleImage original circles) =
-  CircleImage original <$> mapM (maybeTweak 0.15 $ tweakCircle s sc) circles
+  mapM (maybeTweak 0.35 $ tweakCircle s sc) circles
+  >>= maybeTweak 0.01 (addCircle original)
+  >>= maybeTweak 0.01 removeCircle
+  >>= return . CircleImage original
 
 
 tweakCircle :: Float -> Float -> Circle -> RVar Circle
@@ -117,5 +132,5 @@ renderWhite w h =
 
 instance Individual RVar CircleImage where
   fitness = circleImageFitness
-  mutate = tweakCircleImage 4.5 13
+  mutate = tweakCircleImage 4.5 32
   recombine x y = return x
