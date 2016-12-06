@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 
 module CircleImage where
 
@@ -14,13 +13,10 @@ import qualified Data.Vector.Storable        as V
 import           Evolution
 import           GHC.Generics
 import           Graphics.Rasterific
-import           Graphics.Rasterific
 import           Graphics.Rasterific.Texture
 import           Util
+import           ImageUtils
 
-deriving instance Read PixelRGBA8
-deriving instance Generic PixelRGBA8
-instance NFData PixelRGBA8
 
 data Circle =
   Circle { circleX     :: Int
@@ -42,6 +38,12 @@ instance Show CircleImage where
   show (CircleImage _ circles) = show circles
 
 
+instance Individual RVar CircleImage where
+  fitness = circleImageFitness
+  mutate = tweakCircleImage 2.5 16
+  recombine x y = return x
+
+
 circleImageGen :: Int -> Image PixelRGBA8 -> RVar CircleImage
 circleImageGen maxCircles original@(Image w h _) = do
   -- n <- uniform 1 maxCircles
@@ -60,28 +62,13 @@ circleGen imageW imageH = do
 
   return $ Circle x y r c
 
-  where
-    uniformColor = PixelRGBA8 <$> col <*> col <*> col <*> col
-    col = uniform 0 255
-
-
-addCircle :: Image a -> [Circle] -> RVar [Circle]
-addCircle (Image w h _) =
-  liftM2 (:) (circleGen w h) . return
-
-
-removeCircle :: [Circle] -> RVar [Circle]
-removeCircle [] = return []
-removeCircle circles = do
-  x <- uniform 0 (length circles)
-  return $ (take x circles) ++ (drop (x + 1) circles)
 
 
 tweakCircleImage :: Float -> Float -> CircleImage -> RVar CircleImage
-tweakCircleImage s sc (CircleImage original circles) =
-  mapM (maybeTweak 0.35 $ tweakCircle s sc) circles
-  >>= maybeTweak 0.01 (addCircle original)
-  >>= maybeTweak 0.01 removeCircle
+tweakCircleImage s sc (CircleImage original@(Image w h _) circles) =
+  mapM (maybeTweak 0.20 $ tweakCircle s sc) circles
+  >>= maybeTweak 0.05 (addItem $ circleGen w h)
+  >>= maybeTweak 0.01 randomRemove
   >>= return . CircleImage original
 
 
@@ -105,32 +92,9 @@ renderCircle (Circle x y r c) =
     radius = fromIntegral r
 
 
-renderCircles :: [Circle] -> Drawing PixelRGBA8 ()
-renderCircles = mapM_ renderCircle
-
-
-imageFitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Double
-imageFitness (Image _ _ source) (Image _ _ target) =
-  V.sum $ V.zipWith deltaSq source target
-  where
-    deltaSq a b =
-      delta * delta
-      where delta = fromIntegral a / 255 - fromIntegral b / 255
-
+renderCircleImage (CircleImage (Image w h _) circles) =
+  renderWhite w h $ mapM_ renderCircle circles
 
 circleImageFitness :: CircleImage -> Double
-circleImageFitness (CircleImage original@(Image w h _) circles) =
-    imageFitness original $ renderWhite w h $ renderCircles circles
-
-
-renderWhite :: Int -> Int -> Drawing PixelRGBA8 () -> Image PixelRGBA8
-renderWhite w h =
-  renderDrawing w h white
-  where
-    white = PixelRGBA8 255 255 255 255
-
-
-instance Individual RVar CircleImage where
-  fitness = circleImageFitness
-  mutate = tweakCircleImage 4.5 32
-  recombine x y = return x
+circleImageFitness ci@(CircleImage original _) =
+    imageFitness original $ renderCircleImage ci

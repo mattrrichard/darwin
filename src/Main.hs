@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -12,60 +13,81 @@ import           Data.Random
 import qualified Data.Vector.Storable as V
 import           Evolution
 import           Graphics.Rasterific
+import           ImageUtils
+import           PolygonImage
 import           SimulatedAnnealing
 import           Strategies
 import           System.IO
+import           System.Environment
+
+
+data Config s a b =
+  Config { strategy ::  s
+         , indGen :: RVar a
+         , readPop :: b -> a
+         , runName :: String
+         , startingGenId :: Int
+         , render :: a -> Image PixelRGBA8
+         , stepCount :: Int
+         }
+
+
+runner :: (EvolutionStrategy s, Individual RVar a, Show a, Read b) => Config s a b -> IO ()
+runner (Config strategy indGen readPop runName startingGenId render stepCount) = do
+  startingGen <- loadGen startingGenId
+
+  void $ iterateM loop (startingGenId, startingGen)
+
+  where
+    fileName id = "out/" ++ runName ++ show id
+
+    loadGen 0 = sample $ replicateM (popSize strategy) indGen
+    loadGen id =
+      map readPop . read <$> readFile (fileName id ++ ".data")
+
+    loop (genId, population) = do
+      putStrLn $ "starting from generation " ++ show genId
+      hFlush stdout
+
+      lastGen <- runRVar (last . take stepCount $ evolve strategy population) StdRandom
+
+      let best = head lastGen
+      let endingGenId = genId + stepCount
+
+      writePng (fileName endingGenId ++ ".png") $ render best
+
+      writeFile (fileName endingGenId ++ ".data") $ show lastGen
+
+      return (endingGenId, lastGen)
+
+
+polygonConfig sourceImg s startingGen stepCount =
+  Config { strategy = s
+         , indGen = polygonImageGen 25 sourceImg
+         , readPop = PolygonImage sourceImg
+         , runName = "polygons"
+         , startingGenId = startingGen
+         , render = renderPolygonImage
+         , stepCount = stepCount
+         }
+
+circleConfig sourceImg s startingGen stepCount =
+  Config { strategy = s
+         , indGen = circleImageGen 50 sourceImg
+         , readPop = CircleImage sourceImg
+         , runName = "circles"
+         , startingGenId = startingGen
+         , render = renderCircleImage
+         , stepCount = stepCount
+         }
+
 
 main :: IO ()
 main = do
-  (Right source) <- readImage "images/landscape-st-remy-306-240.jpg"
+  [filename] <- getArgs
+  (Right source) <- readImage filename --"images/landscape-st-remy-306-240.jpg"
   let sourceImg = convertRGBA8 source
 
-  let startGenId = 1600
+  let config = polygonConfig sourceImg (MuPlusLambda 4 32) 0 25
 
-  initial <- getGen sourceImg 50 startGenId
-
-  iterateM (loop sourceImg 25) (startGenId, initial)
-
-  return ()
-
-  where
-    getGen sourceImg size 0 =
-      runRVar (replicateM size $ circleImageGen 50 sourceImg) StdRandom
-
-    getGen sourceImg _ id =
-      map (CircleImage sourceImg) . readCircles
-      <$> readFile ("out/generation" ++ show id ++ ".circles")
-
-    readCircles :: String -> [[Circle]]
-    readCircles = read
-
-
-loop :: Image PixelRGBA8 -> Int -> (Int, [CircleImage]) -> IO (Int, [CircleImage])
-loop sourceImg stepCount (genId, initial) = do
-
-  putStrLn $ "starting from generation " ++ show genId
-  hFlush stdout
-
-  let generations = evolve (MuPlusLambda 8 64) initial
-
-  lastGen <- runRVar (last . take stepCount $ generations) StdRandom
-
-  let best = head lastGen
-  let endingGenId = genId + stepCount
-
-  writePng ("out/best" ++ show endingGenId ++ ".png") $ render best
-
-  writeFile ("out/generation" ++ show endingGenId ++ ".circles") (show (map circles lastGen))
-
-  return (endingGenId, lastGen)
-
-  where
-
-    readCircles :: String -> [[Circle]]
-    readCircles = read
-
-    circles (CircleImage _ cs) = cs
-
-    render (CircleImage (Image w h _) circles) =
-      renderWhite w h $ renderCircles circles
+  runner config

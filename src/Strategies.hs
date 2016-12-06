@@ -1,12 +1,20 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 module Strategies where
 
 import Evolution
 import Data.List
 import Control.Monad
+import Data.Random
+import Data.Random.List
 
 data MuLambda = MuLambda Int Int
 
 instance EvolutionStrategy MuLambda where
+  popSize (MuLambda _ lambda) = lambda
+
   joinGens _ _ children = children
 
   breed (MuLambda mu lambda) parents = do
@@ -26,7 +34,34 @@ instance EvolutionStrategy MuLambda where
 data MuPlusLambda = MuPlusLambda Int Int
 
 instance EvolutionStrategy MuPlusLambda where
+  popSize (MuPlusLambda _ lambda) = lambda
+
   breed (MuPlusLambda mu lambda) = breed (MuLambda mu lambda)
 
-  joinGens (MuPlusLambda _ lambda) parents children =
-    take lambda $ sortBy compareFitness (parents ++ children)
+  joinGens (MuPlusLambda mu lambda) parents children =
+    take mu (sortBy compareFitness parents) ++ children
+
+
+tournamentSelection :: Individual RVar a => Int -> [a] -> RVar a
+tournamentSelection t pop =
+  randomElement pop >>= runTournament (t-1)
+
+  where
+    runTournament t currentWinner | t > 0 = do
+      challenger <- randomElement pop
+      runTournament (t-1) (minimumBy compareFitness [currentWinner, challenger])
+
+    runTournament _ currentWinner = return currentWinner
+
+
+-- data TournamentElitism = TournamentElitism Int Int Int
+
+-- instance EvolutionStrategy RVar TournamentElitism where
+--   popSize (TournamentElitism lambda _ _) = lambda
+
+--   joinGens (TournamentElitism _ _ elites) parents children =
+--     take elites (sortBy compareFitness parents) ++ children
+
+--   breed (TournamentElitism lambda t _) parents =
+--     replicateM lambda (tournamentSelection t parents)
+--     >>= mapM mutate

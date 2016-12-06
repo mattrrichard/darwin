@@ -8,7 +8,10 @@ packages:
 - '.'
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
-extra-deps: [erf-native-1.0.0.1, polynomial-0.7.2]
+extra-deps: 
+  [ erf-native-1.0.0.1
+  , polynomial-0.7.2
+  ]
 
 # Override default flag values for local packages and extra-deps
 flags: {}

@@ -18,8 +18,10 @@ executable darwin
                      , deepseq
                      , monad-extras
 
-  other-modules:       Evolution
-                     , Util
-                     , CircleImage
-                     , Strategies
+  other-modules:       CircleImage
+                     , Evolution
+                     , ImageUtils
+                     , PolygonImage
                      , SimulatedAnnealing
+                     , Strategies
+                     , Util

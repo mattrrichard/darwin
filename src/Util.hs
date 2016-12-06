@@ -2,6 +2,7 @@ module Util where
 
 import Data.Random
 import Codec.Picture
+import Control.Monad
 
 -- | Normal distribution with mean 0 and standard deviation @s@ in Int
 normalInt :: Float -> RVar Int
@@ -36,3 +37,21 @@ maybeTweak p tweak target = do
     tweak target
   else
     return target
+
+
+uniformColor :: RVar PixelRGBA8
+uniformColor = PixelRGBA8 <$> col <*> col <*> col <*> col
+  where col = uniform 0 255
+
+randomRemove = randomRemoveRespectMin 0
+
+randomRemoveRespectMin :: Int -> [a] -> RVar [a]
+randomRemoveRespectMin minRemaining xs | length xs <= minRemaining = return xs
+randomRemoveRespectMin minRemaining xs =
+    dropAt <$> uniform 0 (length xs) <*> pure xs
+  where
+    dropAt i xs = take i xs ++ drop (i+1) xs
+
+
+addItem gen =
+  liftM2 (:) gen . return

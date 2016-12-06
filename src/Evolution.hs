@@ -30,6 +30,7 @@ class (Monad m, NFData a) => Individual m a | a -> m where
 class EvolutionStrategy s where
   joinGens :: Individual m a => s -> [a] -> [a] -> [a]
   breed :: Individual m a => s -> [a] -> m [a]
+  popSize :: s -> Int
 
 
 data Cached a
