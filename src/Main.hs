@@ -63,7 +63,7 @@ runner (Config strategy indGen readPop runName startingGenId render stepCount) =
 
 polygonConfig sourceImg s startingGen stepCount =
   Config { strategy = s
-         , indGen = polygonImageGen 25 sourceImg
+         , indGen = return $ initEmpty sourceImg
          , readPop = PolygonImage sourceImg
          , runName = "polygons"
          , startingGenId = startingGen

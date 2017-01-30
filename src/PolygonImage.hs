@@ -5,11 +5,14 @@
 
 module PolygonImage where
 
+import Data.Ord
 import Codec.Picture
 import Control.DeepSeq
 import Control.Monad
 import Data.Random
+import Data.Function
 import Graphics.Rasterific
+import Data.List
 import Graphics.Rasterific.Texture
 import GHC.Generics
 import ImageUtils
@@ -44,6 +47,8 @@ polygonImageGen polygonCount sourceImg@(Image w h _) =
   PolygonImage sourceImg <$> replicateM polygonCount (genPolygon w h)
 
 
+initEmpty sourceImg = PolygonImage sourceImg []
+
 genPolygon :: Int -> Int -> RVar Polygon
 genPolygon w h = do
   sides <- (+3) . round . abs <$> (stdNormal :: RVar Float)
@@ -66,26 +71,30 @@ renderPolygon (Polygon points color) =
 
     lines = zipWith Line points (drop 1 $ cycle points)
 
+
 renderPolygonImage (PolygonImage (Image w h _) polys) =
   renderWhite w h $ mapM_ renderPolygon polys
 
 
 tweakPolygonImage s sc (PolygonImage source@(Image w h _) polys) =
-  mapM (maybeTweak 0.15 $ tweakPolygon s sc w h) polys
-  >>= maybeTweak 0.05 (addPolygon source)
-  >>= maybeTweak 0.05 randomRemove
+  mapM (maybeTweak 0.98 $ tweakPolygon s sc w h) polys
+  >>= maybeTweak 0.0015 (addPolygon source)
+  >>= maybeTweak 0.0006 randomRemove
+  >>= reorderItems 0.0015
   >>= return . PolygonImage source
 
 
 tweakPolygon :: Float -> Float -> Int -> Int -> Polygon -> RVar Polygon
 tweakPolygon s sc w h (Polygon points color) =
-  Polygon <$> points' <*> tweakPixelRGBA8 sc color
-
+  Polygon <$> points' <*> color'
   where
+    color' = tweakColor 0.00075 sc color
+
     points' =
-      mapM (maybeTweak 0.35 $ tweakPoint s) points
-      >>= maybeTweak 0.05 (addItem $ genPoint w h)
-      >>= maybeTweak 0.05 (randomRemoveRespectMin 3)
+      mapM (maybeTweak 0.002 $ tweakPoint s) points
+      >>= maybeTweak 0.0006 (addItem $ genPoint w h)
+      >>= maybeTweak 0.0006 (randomRemoveRespectMin 3)
+      >>= return
 
 
 tweakPoint :: Float -> Point -> RVar Point
@@ -99,5 +108,6 @@ addPolygon (Image w h _) =
   liftM2 (:) (genPolygon w h) . return
 
 
+polygonImageFitness :: PolygonImage -> Double
 polygonImageFitness pi@(PolygonImage source _) =
   imageFitness source $ renderPolygonImage pi
