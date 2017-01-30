@@ -38,9 +38,9 @@ instance Show CircleImage where
   show (CircleImage _ circles) = show circles
 
 
-instance Individual RVar CircleImage where
+instance Individual CircleImage where
   fitness = circleImageFitness
-  mutate = tweakCircleImage 2.5 16
+  mutate = sample .tweakCircleImage 2.5 16
   recombine x y = return x
 
 

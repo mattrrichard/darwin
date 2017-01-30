@@ -33,10 +33,10 @@ instance Show PolygonImage where
   show (PolygonImage _ polygons) = show polygons
 
 
-instance Individual RVar PolygonImage where
+instance Individual PolygonImage where
   fitness = polygonImageFitness
   recombine a b = return a
-  mutate = tweakPolygonImage 2.5 16
+  mutate = sample .tweakPolygonImage 2.5 16
 
 
 polygonImageGen :: Int -> Image PixelRGBA8 -> RVar PolygonImage

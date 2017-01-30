@@ -32,7 +32,7 @@ data Config s a b =
          }
 
 
-runner :: (EvolutionStrategy s, Individual RVar a, Show a, Read b) => Config s a b -> IO ()
+runner :: (EvolutionStrategy s, Individual a, Show a, Read b) => Config s a b -> IO ()
 runner (Config strategy indGen readPop runName startingGenId render stepCount) = do
   startingGen <- loadGen startingGenId
 

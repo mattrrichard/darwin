@@ -21,20 +21,20 @@ import           Data.Random
 import           GHC.Generics
 
 
-class (Monad m, NFData a) => Individual m a | a -> m where
+class NFData a => Individual a where
   fitness :: a -> Double
-  mutate :: a -> m a
-  recombine :: a -> a -> m a
+  mutate :: MonadRandom m => a -> m a
+  recombine :: MonadRandom m => a -> a -> m a
 
 
 class EvolutionStrategy s where
-  joinGens :: Individual m a => s -> [a] -> [a] -> [a]
-  breed :: Individual m a => s -> [a] -> m [a]
   popSize :: s -> Int
+  joinGens :: Individual a => s -> [a] -> [a] -> [a]
+  breed :: (Individual a, MonadRandom m) => s -> [a] -> m [a]
 
 
 data Cached a
-  = Cached a Double
+  = Cached !a Double
   | Uncached a
   deriving (Show, Generic)
 
@@ -44,7 +44,7 @@ indFromCached (Cached a _) = a
 indFromCached (Uncached a) = a
 
 
-instance Individual m a => Individual m (Cached a) where
+instance Individual a => Individual (Cached a) where
   fitness (Cached _ fit) = fit
   fitness (Uncached a) = fitness a
 
@@ -57,7 +57,7 @@ ensureCached (Uncached a) = Cached a (fitness a)
 ensureCached c = c
 
 
-step :: (Individual m a, EvolutionStrategy s) => s -> [Cached a] -> m [Cached a]
+step :: (Individual a, EvolutionStrategy s, MonadRandom m) => s -> [Cached a] -> m [Cached a]
 step s pop = do
   let cachedPop = cache pop
   children <- cache <$> breed s cachedPop
@@ -75,7 +75,7 @@ step s pop = do
     isCached _ = True
 
 
-evolve :: (EvolutionStrategy s, Individual m a) => s -> [a] -> [m [a]]
+evolve :: (EvolutionStrategy s, Individual a, MonadRandom m) => s -> [a] -> [m [a]]
 evolve s startingPop =
   indFromCached `f3` cachedGens
   where
@@ -87,6 +87,6 @@ evolve s startingPop =
       iterate (>>= (step s)) $ return initial
 
 
-compareFitness :: Individual m a => a -> a -> Ordering
+compareFitness :: Individual a => a -> a -> Ordering
 compareFitness a b =
   compare (fitness a) (fitness b)

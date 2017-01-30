@@ -42,7 +42,7 @@ instance EvolutionStrategy MuPlusLambda where
     take mu (sortBy compareFitness parents) ++ children
 
 
-tournamentSelection :: Individual RVar a => Int -> [a] -> RVar a
+tournamentSelection :: Individual a => Int -> [a] -> RVar a
 tournamentSelection t pop =
   randomElement pop >>= runTournament (t-1)
 
