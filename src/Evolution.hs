@@ -1,8 +1,6 @@
-{-# LANGUAGE DeriveGeneric          #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Evolution
        ( Individual (..)
@@ -11,14 +9,19 @@ module Evolution
        , evolve
        ) where
 
+import           Control.Arrow               ((&&&))
 import           Control.DeepSeq
 import           Control.Monad
+import           Control.Monad.Trans         (lift)
 import           Control.Parallel.Strategies
 import           Data.Foldable               (minimumBy)
+import           Data.Function
 import           Data.List
 import           Data.Maybe
 import           Data.Random
 import           GHC.Generics
+import           Pipes
+import qualified Pipes.Prelude               as P
 
 
 class NFData a => Individual a where
@@ -75,18 +78,15 @@ step s pop = do
     isCached _ = True
 
 
-evolve :: (EvolutionStrategy s, Individual a, MonadRandom m) => s -> [a] -> [m [a]]
+evolve :: (EvolutionStrategy s, Individual a, MonadRandom m) => s -> [a] -> Producer [a] m ()
 evolve s startingPop =
-  indFromCached `f3` cachedGens
-  where
-    f3 = fmap . fmap . fmap -- list . m . list
-
-    initial = map Uncached startingPop
-
-    cachedGens =
-      iterate (>>= (step s)) $ return initial
+  P.unfoldr evoStep (Uncached <$> startingPop)
+  where evoStep = fmap wrapNextGen . step s
+        wrapNextGen = Right . (map indFromCached &&& id)
 
 
 compareFitness :: Individual a => a -> a -> Ordering
-compareFitness a b =
-  compare (fitness a) (fitness b)
+compareFitness =
+  compare `on` fitness
+
+

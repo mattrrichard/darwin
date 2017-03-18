@@ -17,6 +17,9 @@ executable darwin
                      , parallel
                      , deepseq
                      , monad-extras
+                     , pipes
+                     , transformers
+                     , mtl
 
   other-modules:       CircleImage
                      , Evolution

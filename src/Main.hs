@@ -1,6 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE RecordWildCards      #-}
 
 module Main where
 
@@ -14,51 +12,47 @@ import qualified Data.Vector.Storable as V
 import           Evolution
 import           Graphics.Rasterific
 import           ImageUtils
+import           Pipes
+import qualified Pipes.Prelude        as P
 import           PolygonImage
-import           SimulatedAnnealing
 import           Strategies
-import           System.IO
 import           System.Environment
+import           System.IO
 
 
 data Config s a b =
-  Config { strategy ::  s
-         , indGen :: RVar a
-         , readPop :: b -> a
-         , runName :: String
+  Config { strategy      ::  s
+         , indGen        :: IO a
+         , readPop       :: b -> a
+         , runName       :: String
          , startingGenId :: Int
-         , render :: a -> Image PixelRGBA8
-         , stepCount :: Int
+         , render        :: a -> Image PixelRGBA8
+         , stepCount     :: Int
          }
 
 
 runner :: (EvolutionStrategy s, Individual a, Show a, Read b) => Config s a b -> IO ()
-runner (Config strategy indGen readPop runName startingGenId render stepCount) = do
+runner Config {..} = do
   startingGen <- loadGen startingGenId
-
-  void $ iterateM loop (startingGenId, startingGen)
+  runEffect $
+    P.zip (evolve strategy startingGen) (each [startingGenId..])
+    >-> pipeSkip stepCount
+    >-> processGeneration
 
   where
     fileName id = "out/" ++ runName ++ show id
 
-    loadGen 0 = sample $ replicateM (popSize strategy) indGen
+    loadGen 0 = replicateM (popSize strategy) indGen
     loadGen id =
       map readPop . read <$> readFile (fileName id ++ ".data")
 
-    loop (genId, population) = do
-      putStrLn $ "starting from generation " ++ show genId
-      hFlush stdout
+    processGeneration = forever $ do
+      (gen, genId) <- await
+      lift $ do
+        putStrLn ("completed gen " ++ show genId)
+        writePng (fileName genId ++ ".png") $ render (head gen)
+        writeFile (fileName genId ++ ".data") $ show gen
 
-      lastGen <- runRVar (last . take stepCount $ evolve strategy population) StdRandom
-
-      let best = head lastGen
-      let endingGenId = genId + stepCount
-
-      writePng (fileName endingGenId ++ ".png") $ render best
-
-      writeFile (fileName endingGenId ++ ".data") $ show lastGen
-
-      return (endingGenId, lastGen)
 
 
 polygonConfig sourceImg s startingGen stepCount =
@@ -73,7 +67,7 @@ polygonConfig sourceImg s startingGen stepCount =
 
 circleConfig sourceImg s startingGen stepCount =
   Config { strategy = s
-         , indGen = circleImageGen 50 sourceImg
+         , indGen = sample $ circleImageGen 50 sourceImg
          , readPop = CircleImage sourceImg
          , runName = "circles"
          , startingGenId = startingGen
@@ -91,3 +85,16 @@ main = do
   let config = polygonConfig sourceImg (MuPlusLambda 4 32) 0 25
 
   runner config
+
+-- the fact that I had to make these two functions myself feels wrong.  Maybe I missed something?
+pipeSkip n = forever $ do
+  await >>= yield
+  replicateM_ (n-1) await
+
+
+pipeWithIndex :: Monad m => Pipe a (a, Int) m r
+pipeWithIndex = do
+  first <- await
+  P.scan step (first, 0) id
+
+  where step (_, index) x = (x, index + 1)
