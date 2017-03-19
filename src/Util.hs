@@ -1,10 +1,10 @@
-{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE LambdaCase #-}
 module Util where
 
-import Data.Random
-import Codec.Picture
-import Control.Monad
-import Data.Foldable
+import           Codec.Picture
+import           Control.Monad
+import           Data.Foldable
+import           Data.Random
 
 -- | Normal distribution with mean 0 and standard deviation @s@ in Int
 normalInt :: Float -> RVar Int
@@ -36,6 +36,7 @@ tweakPixelRGBA8 = tweakColor 1.0
 
 
 maybeTweak :: Float -> (a -> RVar a) -> a -> RVar a
+maybeTweak 1.0 tweak target = tweak target
 maybeTweak p tweak target = do
   x <- uniform 0 1
 
@@ -73,7 +74,7 @@ randomlyReinsert (x:xs) list = do
 
 
 uniformColor :: RVar PixelRGBA8
-uniformColor = PixelRGBA8 <$> col <*> col <*> col <*> (uniform 30 60)
+uniformColor = PixelRGBA8 <$> col <*> col <*> col <*> uniform 30 60
   where col = uniform 0 255
 
 randomRemove = randomRemoveRespectMin 0

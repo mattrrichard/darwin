@@ -1,14 +1,14 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 module Strategies where
 
-import Evolution
-import Data.List
-import Control.Monad
-import Data.Random
-import Data.Random.List
+import           Control.Monad
+import           Data.List
+import           Data.Random
+import           Data.Random.List
+import           Evolution
 
 data MuLambda = MuLambda Int Int
 

@@ -7,10 +7,10 @@ module ImageUtils where
 
 import           Codec.Picture
 import           Control.DeepSeq
+import qualified Data.Vector.Storable        as V
+import           GHC.Generics
 import           Graphics.Rasterific
 import           Graphics.Rasterific.Texture
-import           GHC.Generics
-import qualified Data.Vector.Storable        as V
 
 deriving instance Read PixelRGBA8
 deriving instance Generic PixelRGBA8

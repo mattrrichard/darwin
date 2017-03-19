@@ -1,23 +1,20 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module PolygonImage where
 
-import Data.Ord
-import Codec.Picture
-import Control.DeepSeq
-import Control.Monad
-import Data.Random
-import Data.Function
-import Graphics.Rasterific
-import Data.List
-import Graphics.Rasterific.Texture
-import GHC.Generics
-import ImageUtils
-import Util
-import Evolution
+import           Codec.Picture
+import           Control.DeepSeq
+import           Control.Monad
+import           Data.Function
+import           Data.List
+import           Data.Ord
+import           Data.Random
+import           Evolution
+import           GHC.Generics
+import           Graphics.Rasterific
+import           Graphics.Rasterific.Texture
+import           ImageUtils
+import           Util
 
 
 data Polygon =
@@ -77,11 +74,11 @@ renderPolygonImage (PolygonImage (Image w h _) polys) =
 
 
 tweakPolygonImage s sc (PolygonImage source@(Image w h _) polys) =
-  mapM (maybeTweak 0.98 $ tweakPolygon s sc w h) polys
-  >>= maybeTweak 0.0015 (addPolygon source)
-  >>= maybeTweak 0.0006 randomRemove
-  >>= reorderItems 0.0015
-  >>= return . PolygonImage source
+  PolygonImage source <$>
+    (mapM (maybeTweak 0.98 $ tweakPolygon s sc w h) polys
+    >>= maybeTweak 0.0015 (addPolygon source)
+    >>= maybeTweak 0.0006 randomRemove
+    >>= reorderItems 0.0015)
 
 
 tweakPolygon :: Float -> Float -> Int -> Int -> Polygon -> RVar Polygon
@@ -94,7 +91,6 @@ tweakPolygon s sc w h (Polygon points color) =
       mapM (maybeTweak 0.002 $ tweakPoint s) points
       >>= maybeTweak 0.0006 (addItem $ genPoint w h)
       >>= maybeTweak 0.0006 (randomRemoveRespectMin 3)
-      >>= return
 
 
 tweakPoint :: Float -> Point -> RVar Point
@@ -102,6 +98,7 @@ tweakPoint s (V2 x y) =
   V2 <$> tweak x <*> tweak y
   where
     tweak v = (+v) <$> normal 0 s
+
 
 addPolygon :: Image a -> [Polygon] -> RVar [Polygon]
 addPolygon (Image w h _) =
