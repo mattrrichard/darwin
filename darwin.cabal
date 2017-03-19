@@ -8,7 +8,7 @@ executable darwin
   hs-source-dirs:      src
   main-is:             Main.hs
   default-language:    Haskell2010
-  ghc-options:         -threaded
+  ghc-options:         -threaded -with-rtsopts=-N
   build-depends:       base >= 4.7 && < 5
                      , JuicyPixels
                      , Rasterific
