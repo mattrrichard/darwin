@@ -86,15 +86,9 @@ main = do
 
   runner config
 
--- the fact that I had to make these two functions myself feels wrong.  Maybe I missed something?
+-- The fact that I had to write this myself feels wrong.  Did I miss something?
 pipeSkip n = forever $ do
+  skip (n-1)
   await >>= yield
-  replicateM_ (n-1) await
-
-
-pipeWithIndex :: Monad m => Pipe a (a, Int) m r
-pipeWithIndex = do
-  first <- await
-  P.scan step (first, 0) id
-
-  where step (_, index) x = (x, index + 1)
+  where skip 0 = return ()
+        skip n = await >> skip (n-1)
