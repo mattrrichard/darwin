@@ -34,20 +34,20 @@ data Config s a b =
 runner :: (EvolutionStrategy s, Individual a, Show a, Read b) => Config s a b -> IO ()
 runner Config {..} = do
   startingGen <- loadGen startingGenId
-  runEffect $
-    P.zip (evolve strategy startingGen) (each [startingGenId..])
-    >-> pipeSkip stepCount
-    >-> processGeneration
+  runEffect $ for (pipeline startingGen) processGeneration
 
   where
+    pipeline startingGen =
+      P.zip (evolve strategy startingGen) (each [startingGenId..])
+      >-> pipeSkip stepCount
+
     fileName id = "out/" ++ runName ++ show id
 
     loadGen 0 = replicateM (popSize strategy) indGen
     loadGen id =
       map readPop . read <$> readFile (fileName id ++ ".data")
 
-    processGeneration = forever $ do
-      (gen, genId) <- await
+    processGeneration (gen, genId) =
       lift $ do
         putStrLn ("completed gen " ++ show genId)
         writePng (fileName genId ++ ".png") $ render (head gen)
