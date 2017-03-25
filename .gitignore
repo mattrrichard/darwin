@@ -19,3 +19,4 @@ cabal.sandbox.config
 TAGS
 *.circles
 images/
+out/
