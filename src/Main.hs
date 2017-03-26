@@ -1,11 +1,12 @@
-{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
-
 import           CircleImage
 import           Codec.Picture
+import           Control.Concurrent   (forkIO)
 import           Control.Monad
 import           Control.Monad.Extra
+import qualified Data.Char            as C (toLower)
 import           Data.List
 import           Data.Random
 import qualified Data.Vector.Storable as V
@@ -17,6 +18,7 @@ import qualified Pipes.Prelude        as P
 import           PolygonImage
 import           Strategies
 import           System.Environment
+import qualified System.Exit          as S
 import           System.IO
 
 
@@ -34,11 +36,13 @@ data Config s a b =
 runner :: (EvolutionStrategy s, Individual a, Show a, Read b) => Config s a b -> IO ()
 runner Config {..} = do
   startingGen <- loadGen startingGenId
+  putStrLn $ "starting at gen " ++ show startingGenId
   runEffect $ for (pipeline startingGen) processGeneration
 
   where
     pipeline startingGen =
-      P.zip (evolve strategy startingGen) (each [startingGenId..])
+      P.zip (evolve strategy startingGen) (each [startingGenId+1..])
+      >-> P.chain (print . snd)
       >-> pipeSkip stepCount
 
     fileName id = "out/" ++ runName ++ show id
@@ -82,9 +86,14 @@ main = do
   (Right source) <- readImage filename --"images/landscape-st-remy-306-240.jpg"
   let sourceImg = convertRGBA8 source
 
-  let config = polygonConfig sourceImg (MuPlusLambda 4 32) 0 25
+  let config = polygonConfig sourceImg (MuPlusLambda 4 32) 6300 25
 
-  runner config
+  forkIO $ runner config
+
+  forever $ do
+    hSetBuffering stdin NoBuffering
+    c <- getChar
+    when (C.toLower c == 'q') S.exitSuccess
 
 -- The fact that I had to write this myself feels wrong.  Did I miss something?
 pipeSkip n = forever $ do
