@@ -72,7 +72,7 @@ step s pop = do
   where
     cache p =
       if all isCached p then p
-      else ensureCached <$> p `using` parListChunk 16 rdeepseq
+      else ensureCached <$> p `using` parList rdeepseq
 
     isCached (Uncached _) = False
     isCached _ = True
