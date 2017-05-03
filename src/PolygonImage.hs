@@ -1,3 +1,6 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 
 module PolygonImage where
@@ -19,7 +22,7 @@ import           Util
 
 data Polygon =
   Polygon [Point] PixelRGBA8
-  deriving (Read, Show, Generic)
+  deriving (Read, Show, Eq, Generic)
 
 
 data PolygonImage =
@@ -33,11 +36,16 @@ instance Show PolygonImage where
   show (PolygonImage _ polygons) = show polygons
 
 
-instance Individual PolygonImage where
-  fitness = polygonImageFitness
-  recombine a b = return a
-  mutate = sample .tweakPolygonImage 2.5 16
+instance HasFitness PolygonImage where
+  type Fitness PolygonImage = Down Double
+  fitness = Down . polygonImageFitness
 
+instance MonadRandom m => Tweakable m PolygonImage where
+  type TweakConfig PolygonImage = Image PixelRGBA8
+  generate = sample . polygonImageGen 10
+  mutate _ = sample . tweakPolygonImage 2.5 16
+
+instance MonadRandom m => Individual m PolygonImage
 
 polygonImageGen :: Int -> Image PixelRGBA8 -> RVar PolygonImage
 polygonImageGen polygonCount sourceImg@(Image w h _) =
@@ -73,12 +81,15 @@ renderPolygonImage (PolygonImage (Image w h _) polys) =
   renderWhite w h $ mapM_ renderPolygon polys
 
 
-tweakPolygonImage s sc (PolygonImage source@(Image w h _) polys) =
-  PolygonImage source <$>
-    (mapM (maybeTweak 0.98 $ tweakPolygon s sc w h) polys
-    >>= maybeTweak 0.0015 (addPolygon source)
-    >>= maybeTweak 0.0006 randomRemove
-    >>= reorderItems 0.0015)
+tweakPolygonImage s sc pi@(PolygonImage source@(Image w h _) polys) = do
+  polys' <- mapM (maybeTweak 0.98 $ tweakPolygon s sc w h) polys
+            >>= maybeTweak 0.0015 (addPolygon source)
+            >>= maybeTweak 0.0006 randomRemove
+            >>= reorderItems 0.0015
+
+  if polys' == polys
+  then tweakPolygonImage s sc pi
+  else return $ PolygonImage source polys'
 
 
 tweakPolygon :: Float -> Float -> Int -> Int -> Polygon -> RVar Polygon

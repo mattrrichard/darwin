@@ -1,9 +1,14 @@
-{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Evolution
-       ( Individual (..)
+       ( HasFitness (..)
+       , Tweakable (..)
+       , Individual
        , EvolutionStrategy (..)
        , compareFitness
        , evolve
@@ -18,75 +23,71 @@ import           Data.Foldable               (minimumBy)
 import           Data.Function
 import           Data.List
 import           Data.Maybe
+import           Data.Ord                    (Down(..))
 import           Data.Random
 import           GHC.Generics
 import           Pipes
 import qualified Pipes.Prelude               as P
 
 
-class NFData a => Individual a where
-  fitness :: a -> Double
-  mutate :: MonadRandom m => a -> m a
-  recombine :: MonadRandom m => a -> a -> m a
+class (Ord (Fitness a), NFData (Fitness a)) => HasFitness a where
+  type Fitness a :: *
+  fitness :: a -> Fitness a
 
+class Tweakable m a where
+  type TweakConfig a :: *
+  generate :: TweakConfig a -> m a
+  mutate :: TweakConfig a -> a -> m a
+
+class (HasFitness a, Tweakable m a) => Individual m a where
+
+newtype Cached a b = Cached { getCached :: (a, b) } deriving Show
+
+uncache = fst . getCached
+
+cache :: HasFitness a => a -> Cached a (Fitness a)
+cache = Cached . (id &&& fitness)
+
+instance (HasFitness a, Fitness a ~ b) => HasFitness (Cached a b) where
+  type Fitness (Cached a b) = b
+  fitness = snd . getCached
+
+instance (Individual m a, Fitness a ~ b, Functor m) => Tweakable m (Cached a b) where
+  type TweakConfig (Cached a b) = TweakConfig a
+  generate = fmap cache . generate
+  mutate c = fmap cache . mutate c . uncache
+
+instance (Individual m a, Fitness a ~ b, Functor m) => Individual m (Cached a b)
 
 class EvolutionStrategy s where
   popSize :: s -> Int
-  joinGens :: Individual a => s -> [a] -> [a] -> [a]
-  breed :: (Individual a, MonadRandom m) => s -> [a] -> m [a]
+  joinGens :: HasFitness a => s -> [a] -> [a] -> [a]
+  breed :: (Individual m a, MonadRandom m) => s -> [a] -> TweakConfig a -> m [a]
 
 
-data Cached a
-  = Cached !a Double
-  | Uncached a
-  deriving (Show, Generic)
+step :: (Individual m a, EvolutionStrategy s, MonadRandom m, Fitness a ~ b)
+     => s
+     -> TweakConfig a
+     -> [Cached a b]
+     -> m [Cached a b]
+step s tweakConfig pop = do
+  children <- breed s pop tweakConfig
+  let children' = (map fitness children `using` parList rdeepseq) `seq` children
 
-instance NFData a => NFData (Cached a)
-
-indFromCached (Cached a _) = a
-indFromCached (Uncached a) = a
-
-
-instance Individual a => Individual (Cached a) where
-  fitness (Cached _ fit) = fit
-  fitness (Uncached a) = fitness a
-
-  mutate = fmap Uncached . mutate . indFromCached
-
-  recombine a b = Uncached <$> recombine (indFromCached a) (indFromCached b)
-
-
-ensureCached (Uncached a) = Cached a (fitness a)
-ensureCached c = c
-
-
-step :: (Individual a, EvolutionStrategy s, MonadRandom m) => s -> [Cached a] -> m [Cached a]
-step s pop = do
-  let cachedPop = cache pop
-  children <- cache <$> breed s cachedPop
-
-  let nextGen = joinGens s cachedPop children
+  let nextGen = joinGens s pop children'
 
   return $ sortBy compareFitness nextGen
 
-  where
-    cache p =
-      if all isCached p then p
-      else ensureCached <$> p `using` parList rdeepseq
 
-    isCached (Uncached _) = False
-    isCached _ = True
+evolve :: (EvolutionStrategy s, Individual m a, MonadRandom m)
+  => s
+  -> TweakConfig a
+  -> [a] -> Producer [a] m ()
+evolve s tweakConfig startingPop =
+  P.unfoldr evoStep (cache <$> startingPop)
+  where evoStep = fmap wrapNextGen . step s tweakConfig
+        wrapNextGen = Right . (map uncache &&& id)
 
-
-evolve :: (EvolutionStrategy s, Individual a, MonadRandom m) => s -> [a] -> Producer [a] m ()
-evolve s startingPop =
-  P.unfoldr evoStep (Uncached <$> startingPop)
-  where evoStep = fmap wrapNextGen . step s
-        wrapNextGen = Right . (map indFromCached &&& id)
-
-
-compareFitness :: Individual a => a -> a -> Ordering
+compareFitness :: HasFitness a => a -> a -> Ordering
 compareFitness =
-  compare `on` fitness
-
-
+  compare `on` (Down . fitness)
