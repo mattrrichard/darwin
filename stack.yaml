@@ -6,12 +6,15 @@ resolver: lts-8.12
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
+- location:
+    git: git@github.com:dequbed/polynomial
+    commit: 8f78235e6fe6e34624547e25049e916ad4c6e401
+  extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
-  - GLUtil-0.9.1.1
-  # - erf-native-1.0.0.1
-  # - polynomial-0.7.2
+  - erf-native-1.0.0.1
+  - polynomial-0.7.2
 
 # Override default flag values for local packages and extra-deps
 flags: {}

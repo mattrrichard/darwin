@@ -60,6 +60,7 @@ runner Config {..} = do
     pipeline startingGen =
       P.zip (evolve strategy tweakConfig startingGen) (each [startingGenId+1..])
       >-> P.chain (print . snd)
+      >-> P.chain (const $ hFlush stdout)
       -- >-> P.chain (print . fst)
       >-> pipeSkip stepCount
 

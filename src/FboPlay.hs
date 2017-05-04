@@ -8,8 +8,6 @@ import qualified Graphics.Gloss.Rendering     as GR
 import qualified Graphics.Rendering.OpenGL    as GL
 import           Graphics.Rendering.OpenGL.GL (($=))
 
-import qualified Graphics.GLUtil.Textures     as U
-
 import qualified Graphics.UI.GLUT             as G
 
 import qualified Codec.Picture                as P

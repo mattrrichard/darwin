@@ -26,7 +26,6 @@ executable darwin
                      , gloss-rendering
                      , array
                      , OpenGL
-                     , GLUtil
                      , GLUT
                      , bifunctors
 
