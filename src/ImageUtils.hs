@@ -7,7 +7,8 @@ module ImageUtils where
 
 import           Codec.Picture
 import           Control.DeepSeq
-import qualified Data.Vector.Storable        as V
+import qualified Data.Vector.Generic as V
+import Data.Vector.Generic ((!))
 import           GHC.Generics
 import           Graphics.Rasterific
 import           Graphics.Rasterific.Texture
@@ -23,11 +24,13 @@ instance NFData Point
 
 imageFitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Double
 imageFitness (Image _ _ source) (Image _ _ target) =
-  V.sum $ V.zipWith deltaSq source target
+  V.ifoldl' f 0 source
   where
-    deltaSq a b =
-      delta * delta
-      where delta = fromIntegral a / 255 - fromIntegral b / 255
+    f acc i x =
+          acc + deltaSq x (target ! i)
+    deltaSq x y =
+      let delta = (fromIntegral x - fromIntegral y) / 255
+      in delta * delta
 
 
 renderWhite :: Int -> Int -> Drawing PixelRGBA8 () -> Image PixelRGBA8
