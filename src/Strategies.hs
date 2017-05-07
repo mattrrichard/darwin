@@ -10,6 +10,7 @@ import           Data.Random
 import           Data.Random.List
 import           Evolution
 
+
 data MuLambda = MuLambda Int Int
 
 instance EvolutionStrategy MuLambda where
@@ -17,7 +18,7 @@ instance EvolutionStrategy MuLambda where
 
   joinGens _ _ children = children
 
-  breed (MuLambda mu lambda) parents = do
+  breed (MuLambda mu lambda) parents config = do
     let selected = take mu $ sortBy compareFitness parents
 
     children <- mapM makeChildren selected
@@ -26,7 +27,7 @@ instance EvolutionStrategy MuLambda where
 
     where
       makeChildren parent =
-        replicateM childrenPerParent (mutate parent)
+        replicateM childrenPerParent (mutate config parent)
 
       childrenPerParent = lambda `div` mu
 
@@ -39,10 +40,10 @@ instance EvolutionStrategy MuPlusLambda where
   breed (MuPlusLambda mu lambda) = breed (MuLambda mu lambda)
 
   joinGens (MuPlusLambda mu lambda) parents children =
-    take mu (sortBy compareFitness parents) ++ children
+    take mu (sortBy compareFitness $ parents ++ children)
 
 
-tournamentSelection :: Individual a => Int -> [a] -> RVar a
+tournamentSelection :: HasFitness a => Int -> [a] -> RVar a
 tournamentSelection t pop =
   randomElement pop >>= runTournament (t-1)
 

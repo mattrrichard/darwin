@@ -8,7 +8,7 @@ executable darwin
   hs-source-dirs:      src
   main-is:             Main.hs
   default-language:    Haskell2010
-  ghc-options:         -threaded -with-rtsopts=-N
+  ghc-options:         -O2 -threaded -with-rtsopts=-N
   build-depends:       base >= 4.7 && < 5
                      , JuicyPixels
                      , Rasterific
@@ -20,6 +20,14 @@ executable darwin
                      , pipes
                      , transformers
                      , mtl
+                     , lens
+                     , primitive
+                     , gloss
+                     , gloss-rendering
+                     , array
+                     , OpenGL
+                     , GLUT
+                     , bifunctors
 
   other-modules:       CircleImage
                      , Evolution
@@ -28,3 +36,5 @@ executable darwin
                      , SimulatedAnnealing
                      , Strategies
                      , Util
+                     , GlossIndividual
+                     , GLPolygonImage

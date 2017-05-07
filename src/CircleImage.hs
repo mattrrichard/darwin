@@ -37,7 +37,6 @@ instance NFData CircleImage
 instance Show CircleImage where
   show (CircleImage _ circles) = show circles
 
-
 instance Individual CircleImage where
   fitness = circleImageFitness
   mutate = sample .tweakCircleImage 2.5 16

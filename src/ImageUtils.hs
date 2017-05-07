@@ -7,8 +7,11 @@ module ImageUtils where
 
 import           Codec.Picture
 import           Control.DeepSeq
-import qualified Data.Vector.Storable        as V
+import           Data.Ord                    (Down (..))
+import           Data.Vector.Generic         ((!))
+import qualified Data.Vector.Generic         as V
 import           GHC.Generics
+import           GHC.Word                    (Word32, Word8)
 import           Graphics.Rasterific
 import           Graphics.Rasterific.Texture
 
@@ -21,13 +24,18 @@ deriving instance Generic (V2 a)
 instance NFData Point
 
 
-imageFitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Double
+-- NB This is only reliable on images with fewer than 2^24 pixels (4096x4096)
+-- once you get bigger than that you can have overflow
+imageFitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Down Word32
 imageFitness (Image _ _ source) (Image _ _ target) =
-  V.sum $ V.zipWith deltaSq source target
+  -- wrap in a Down since GT should mean a better individual, but this score is lower-is-better
+  Down $ V.ifoldl' f 0 source
   where
-    deltaSq a b =
-      delta * delta
-      where delta = fromIntegral a / 255 - fromIntegral b / 255
+    f acc i x =
+          acc + fromIntegral (delta x $ target ! i)
+
+    delta x y | x > y     = x - y
+              | otherwise = y - x
 
 
 renderWhite :: Int -> Int -> Drawing PixelRGBA8 () -> Image PixelRGBA8
