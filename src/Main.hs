@@ -6,34 +6,33 @@
 module Main where
 import           Codec.Picture
 import           Control.Concurrent           (forkOS)
+import           Control.Lens                 (view)
 import           Control.Monad
 import           Control.Monad.Extra
 import qualified Data.Char                    as C (toLower)
 import           Data.IORef
 import           Data.List
 import           Data.Random
-import qualified Data.Vector.Storable         as V
-import           Evolution
 import           Graphics.Rasterific
-import           ImageUtils
 import           Pipes
 import qualified Pipes.Prelude                as P
-import           PolygonImage
-import           Strategies
 import           System.Environment
 import qualified System.Exit                  as S
 import           System.IO
 
--- import qualified Graphics.Gloss as G
-import qualified FboPlay                      as F
 import           Graphics.Rendering.OpenGL.GL (($=))
-import qualified Graphics.Rendering.OpenGL.GL as GL
-import qualified Graphics.UI.GLUT             as G
+import qualified Graphics.UI.GLUT             as GLUT
+
+import           Evolution
+import           GlossIndividual
+import           GLPolygonImage
+import           ImageUtils
+import           PolygonImage
+import           Strategies
 
 
 data Config s a b c =
   Config { strategy      ::  s
-         , indGen        :: IO a
          , readPop       :: b -> IO a
          , runName       :: String
          , startingGenId :: Int
@@ -43,15 +42,14 @@ data Config s a b c =
          }
 
 
-runner :: (EvolutionStrategy s, Individual IO a, Show a, Read b, Show (Fitness a))
+-- TODO: can I remove the IO constraint on Individual?
+runner :: (EvolutionStrategy s, Individual IO a, Show a, Read b)
   => Config s a b (TweakConfig a)
   -> IO ()
 runner Config {..} = do
 
   putStrLn "loading initial"
   startingGen <- loadGen startingGenId
-  -- readble <- read <$> readFile (fileName startingGenId ++ ".data")
-  -- startingGen <- readPop (readble !! 22)
 
   putStrLn $ "starting at gen " ++ show startingGenId
   runEffect $ for (pipeline startingGen) processGeneration
@@ -61,12 +59,11 @@ runner Config {..} = do
       P.zip (evolve strategy tweakConfig startingGen) (each [startingGenId+1..])
       >-> P.chain (print . snd)
       >-> P.chain (const $ hFlush stdout)
-      -- >-> P.chain (print . fst)
       >-> pipeSkip stepCount
 
     fileName id = "out/" ++ runName ++ show id
 
-    loadGen 0 = replicateM (popSize strategy) indGen
+    loadGen 0 = replicateM (popSize strategy) (generate tweakConfig)
     loadGen id =
       mapM readPop . read =<< readFile (fileName id ++ ".data")
 
@@ -87,7 +84,6 @@ runner Config {..} = do
 
 polygonConfig sourceImg s startingGen stepCount =
   return Config { strategy = s
-                , indGen = return $ initEmpty sourceImg
                 , readPop = return . PolygonImage sourceImg
                 , runName = "polygons"
                 , startingGenId = startingGen
@@ -96,19 +92,18 @@ polygonConfig sourceImg s startingGen stepCount =
                 , tweakConfig = sourceImg
                 }
 
-glConfig sourceImg@(Image w h _) s startingGen stepCount = do
-  G.initialize "darwin" []
-  window <- G.createWindow "darwin"
-  G.displayCallback $= return ()
+glConfig sourceImg s startingGen stepCount = do
+  GLUT.initialize "darwin" []
+  window <- GLUT.createWindow "darwin"
+  GLUT.displayCallback $= return ()
 
-  renderState <- F.initRenderState w h
+  renderState <- initRenderState sourceImg sourceImg
 
   return Config { strategy = s
-                , indGen = F.renderToPolygonPicture renderState $ initEmpty sourceImg
-                , readPop = F.renderToPolygonPicture renderState . PolygonImage sourceImg
-                , runName = "polygons"
+                , readPop = initGlossIndividual renderState . GLPolygonImage . PolygonImage sourceImg
+                , runName = "glpolys"
                 , startingGenId = startingGen
-                , render = F.renderPP renderState
+                , render = return . view getRendered
                 , stepCount = stepCount
                 , tweakConfig = renderState
                 }
