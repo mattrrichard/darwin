@@ -1,7 +1,7 @@
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module PolygonImage where
 
@@ -14,6 +14,7 @@ import           Data.Ord
 import           Data.Random
 import           Evolution
 import           GHC.Generics
+import           GHC.Word                    (Word32)
 import           Graphics.Rasterific
 import           Graphics.Rasterific.Texture
 import           ImageUtils
@@ -37,7 +38,7 @@ instance Show PolygonImage where
 
 
 instance HasFitness PolygonImage where
-  type Fitness PolygonImage = Down Double -- wrapped in "Down" because small fitness values are better
+  type Fitness PolygonImage = Down Word32 -- wrapped in "Down" because small fitness values are better
   fitness = Down . polygonImageFitness
 
 instance MonadRandom m => Tweakable m PolygonImage where
