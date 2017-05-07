@@ -39,7 +39,7 @@ instance Show PolygonImage where
 
 instance HasFitness PolygonImage where
   type Fitness PolygonImage = Down Word32 -- wrapped in "Down" because small fitness values are better
-  fitness = Down . polygonImageFitness
+  fitness = polygonImageFitness
 
 instance MonadRandom m => Tweakable m PolygonImage where
   type TweakConfig PolygonImage = Image PixelRGBA8
@@ -83,7 +83,7 @@ addPolygon (Image w h _) =
   liftM2 (:) (genPolygon w h) . return
 
 
-polygonImageFitness :: PolygonImage -> Word32
+polygonImageFitness :: PolygonImage -> Down Word32
 polygonImageFitness pi@(PolygonImage source _) =
   imageFitness source $ renderPolygonImage pi
 

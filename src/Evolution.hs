@@ -24,7 +24,7 @@ import           Data.Foldable               (minimumBy)
 import           Data.Function
 import           Data.List
 import           Data.Maybe
-import           Data.Ord                    (Down(..))
+import           Data.Ord                    (Down (..))
 import           Data.Random
 import           GHC.Generics
 import           Pipes
@@ -34,6 +34,7 @@ import qualified Pipes.Prelude               as P
 -- TODO: consider refactoring this to a `Getter a (Fitness a)`?
 class (Ord (Fitness a), NFData (Fitness a)) => HasFitness a where
   type Fitness a :: *
+  -- | Compute the fitness of an individual. When comparing, GT should indicate a better individual
   fitness :: a -> Fitness a
 
 

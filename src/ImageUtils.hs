@@ -7,6 +7,7 @@ module ImageUtils where
 
 import           Codec.Picture
 import           Control.DeepSeq
+import           Data.Ord                    (Down (..))
 import           Data.Vector.Generic         ((!))
 import qualified Data.Vector.Generic         as V
 import           GHC.Generics
@@ -25,9 +26,10 @@ instance NFData Point
 
 -- NB This is only reliable on images with fewer than 2^24 pixels (4096x4096)
 -- once you get bigger than that you can have overflow
-imageFitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Word32
+imageFitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Down Word32
 imageFitness (Image _ _ source) (Image _ _ target) =
-  V.ifoldl' f 0 source
+  -- wrap in a Down since GT should mean a better individual, but this score is lower-is-better
+  Down $ V.ifoldl' f 0 source
   where
     f acc i x =
           acc + fromIntegral (delta x $ target ! i)
