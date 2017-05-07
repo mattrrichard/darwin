@@ -40,7 +40,7 @@ instance EvolutionStrategy MuPlusLambda where
   breed (MuPlusLambda mu lambda) = breed (MuLambda mu lambda)
 
   joinGens (MuPlusLambda mu lambda) parents children =
-    take mu (sortBy compareFitness parents) ++ children
+    take mu (sortBy compareFitness $ parents ++ children)
 
 
 tournamentSelection :: HasFitness a => Int -> [a] -> RVar a
