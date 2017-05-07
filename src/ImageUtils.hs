@@ -24,7 +24,7 @@ deriving instance Generic (V2 a)
 instance NFData Point
 
 
--- NB This is only reliable on images with fewer than 2^24 pixels (4096x4096)
+-- NB This is only reliable on images with fewer than 2^22 pixels (2048x2048)
 -- once you get bigger than that you can have overflow
 imageFitness :: Image PixelRGBA8 -> Image PixelRGBA8 -> Down Word32
 imageFitness (Image _ _ source) (Image _ _ target) =
