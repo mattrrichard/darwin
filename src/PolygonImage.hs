@@ -34,7 +34,7 @@ instance NFData Polygon
 instance NFData PolygonImage
 
 instance Show PolygonImage where
-  show (PolygonImage _ polygons) = show polygons
+  showsPrec p (PolygonImage _ polygons) = showsPrec p polygons
 
 
 instance HasFitness PolygonImage where
@@ -43,26 +43,16 @@ instance HasFitness PolygonImage where
 
 instance MonadRandom m => Tweakable m PolygonImage where
   type TweakConfig PolygonImage = Image PixelRGBA8
-  generate = sample . polygonImageGen 10
-  mutate _ = sample . tweakPolygonImage' 2.5 16
+  generate = return . initEmpty
+  mutate _ = sample . tweakPolygonImage 2.5 16
 
 
-polygonImageGen :: Int -> Image PixelRGBA8 -> RVar PolygonImage
-polygonImageGen polygonCount sourceImg@(Image w h _) =
-  PolygonImage sourceImg <$> replicateM polygonCount (genPolygon' w h)
+genPolygonImage :: Int -> Image PixelRGBA8 -> RVar PolygonImage
+genPolygonImage polygonCount sourceImg@(Image w h _) =
+  PolygonImage sourceImg <$> replicateM polygonCount (genPolygon w h)
 
 
 initEmpty sourceImg = PolygonImage sourceImg []
-
-genPolygon :: Int -> Int -> RVar Polygon
-genPolygon w h = do
-  sides <- (+3) . round . abs <$> (stdNormal :: RVar Float)
-
-  color <- uniformColor
-
-  points <- replicateM sides (genPoint w h)
-
-  return $ Polygon points color
 
 genPoint w h =
   V2 <$> uniformF w <*> uniformF h
@@ -81,29 +71,6 @@ renderPolygonImage (PolygonImage (Image w h _) polys) =
   renderWhite w h $ mapM_ renderPolygon polys
 
 
--- tweakPolygonImage s sc pi@(PolygonImage source@(Image w h _) polys) = do
---   polys' <- mapM (maybeTweak 0.98 $ tweakPolygon s sc w h) polys
---             >>= maybeTweak 0.015 (addPolygon source)
---             >>= maybeTweak 0.0006 randomRemove
---             >>= reorderItems 0.0015
-
---   if polys' == polys
---   then tweakPolygonImage s sc pi
---   else return $ PolygonImage source polys'
-
-
--- tweakPolygon :: Float -> Float -> Int -> Int -> Polygon -> RVar Polygon
--- tweakPolygon s sc w h (Polygon points color) =
---   Polygon <$> points' <*> color'
---   where
---     color' = tweakColor 0.00075 sc color
-
---     points' =
---       mapM (maybeTweak 0.004 $ tweakPoint s) points
---       >>= maybeTweak 0.0015 (addItem $ genPoint w h)
---       >>= maybeTweak 0.0006 (randomRemoveRespectMin 3)
-
-
 tweakPoint :: Float -> Point -> RVar Point
 tweakPoint s (V2 x y) =
   V2 <$> tweak x <*> tweak y
@@ -116,34 +83,31 @@ addPolygon (Image w h _) =
   liftM2 (:) (genPolygon w h) . return
 
 
-polygonImageFitness :: PolygonImage -> Double
+polygonImageFitness :: PolygonImage -> Word32
 polygonImageFitness pi@(PolygonImage source _) =
   imageFitness source $ renderPolygonImage pi
 
 
--- TODO this duplication is awkward af
--- all of these should either wholesale replace the old versions or be done via newtype or similar
-tweakPolygonImage' s sc pi@(PolygonImage source@(Image w h _) polys) = do
-  polys' <- mapM (maybeTweak 0.98 $ tweakPolygon' s sc w h) polys
-            >>= maybeTweak 0.001 (liftM2 (:) (genPolygon' w h) . return)
+tweakPolygonImage s sc pi@(PolygonImage source@(Image w h _) polys) = do
+  polys' <- mapM (maybeTweak 0.98 $ tweakPolygon s sc w h) polys
+            >>= maybeTweak 0.001 (liftM2 (:) (genPolygon w h) . return)
             >>= maybeTweak 0.001 randomRemove
             >>= reorderItems 0.00025
 
   if polys' == polys
-  then tweakPolygonImage' s sc pi
+  then tweakPolygonImage s sc pi
   else return $ PolygonImage source polys'
 
 
-genPolygon' :: Int -> Int -> RVar Polygon
-genPolygon' w h = do
+genPolygon :: Int -> Int -> RVar Polygon
+genPolygon w h = do
   start <- genPoint w h
-  numPoints <- (+2) . abs <$> normalInt 0
-  points <- replicateM numPoints (randomTranslate start)
-  Polygon (start : points) <$> uniformColor
+  numPoints <- (+3) . abs <$> normalInt 0
+  Polygon <$> replicateM numPoints (randomTranslate start) <*> uniformColor
 
   where
-    sx = fromIntegral w / 100
-    sy = fromIntegral h / 100
+    sx = fromIntegral w / 50
+    sy = fromIntegral h / 50
 
     randomTranslate v = fmap (+ v) (V2 <$> normal 0 sx <*> normal 0 sy)
 
@@ -173,11 +137,12 @@ splitLine :: [Point] -> RVar [Point]
 splitLine points = do
   index <- uniform 0 $ length points
   let [before, after] = take 2 . drop (index + length points - 1) . cycle $ points
-  let halfway = (before + after) * (V2 0.5 0.5)
-  return $ take index points ++ [halfway] ++ drop index points
+  let halfway = (before + after) * V2 0.5 0.5
+  halfway' <- tweakPoint 1.5 halfway
+  return $ take index points ++ [halfway'] ++ drop index points
 
 
-tweakPolygon' s sc w h (Polygon points color) = do
+tweakPolygon s sc w h (Polygon points color) =
   Polygon <$> points' <*> color'
   where
     color' = tweakColor 0.00075 sc color
