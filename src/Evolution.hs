@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -30,16 +31,18 @@ import           Pipes
 import qualified Pipes.Prelude               as P
 
 
+-- TODO: consider refactoring this to a `Getter a (Fitness a)`?
 class (Ord (Fitness a), NFData (Fitness a)) => HasFitness a where
   type Fitness a :: *
   fitness :: a -> Fitness a
+
 
 class Tweakable m a where
   type TweakConfig a :: *
   generate :: TweakConfig a -> m a
   mutate :: TweakConfig a -> a -> m a
 
-class (HasFitness a, Tweakable m a) => Individual m a where
+type Individual m a = (HasFitness a, Tweakable m a)
 
 newtype Cached a b = Cached { getCached :: (a, b) } deriving Show
 
@@ -57,7 +60,6 @@ instance (Individual m a, Fitness a ~ b, Functor m) => Tweakable m (Cached a b) 
   generate = fmap cache . generate
   mutate c = fmap cache . mutate c . uncache
 
-instance (Individual m a, Fitness a ~ b, Functor m) => Individual m (Cached a b)
 
 class EvolutionStrategy s where
   popSize :: s -> Int

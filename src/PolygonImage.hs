@@ -45,7 +45,6 @@ instance MonadRandom m => Tweakable m PolygonImage where
   generate = sample . polygonImageGen 10
   mutate _ = sample . tweakPolygonImage' 2.5 16
 
-instance MonadRandom m => Individual m PolygonImage
 
 polygonImageGen :: Int -> Image PixelRGBA8 -> RVar PolygonImage
 polygonImageGen polygonCount sourceImg@(Image w h _) =
